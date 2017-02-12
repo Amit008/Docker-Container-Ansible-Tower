@@ -6,5 +6,4 @@ To build this container have to make centos work with systemd which is a require
 
 Centos is now providing Centos 7 image with Systemd which can be downloaded from docker hub
 
-This is not offical Docker image from Ansible and this just for learning purpose how we can build Ansible Tower Container.
-
+This is not a offical Docker container from Ansible and this is only meant for learning purpose how we can build Ansible Tower Container using docker.
