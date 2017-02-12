@@ -1,0 +1,74 @@
+
+### This YML only install Ansible/Ansible Tower Dependencies and Ansible Tower rpm's
+---
+# This playbook deploys the Ansible Tower application (database, web and
+# worker daemons) to a single server.
+
+- hosts: primary:secondary:database
+  gather_facts: false
+  roles:
+    - role: check_config_static
+      check_config_static_required_vars:
+        - tower_package_name
+        - tower_package_version
+        - tower_package_release
+    - role: config_dynamic
+
+- name: "Group nodes by OS distribution"
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: group hosts by distribution
+      group_by: key="{{ ansible_distribution }}-{{ ansible_distribution_version }}"
+      changed_when: false
+
+- name: "Group supported distributions"
+  hosts: RedHat-7*:RedHat-6*:CentOS-7*:CentOS-6*:Ubuntu-12.04:Ubuntu-14.04:OracleLinux-6*:OracleLinux-7*
+  gather_facts: false
+  tasks:
+    - name: group hosts for supported distributions
+      group_by: key="supported"
+      changed_when: false
+
+- name: "Ensure all node OS distributions are supported"
+  hosts: "!supported"
+  gather_facts: false
+  tasks:
+    - name: fail for unsupported distribution
+      fail: msg="{{ ansible_distribution }} {{ ansible_distribution_version }}
+                 is not a supported OS for a Tower installation.  Supported
+                 OSes include Red Hat Enterprise Linux 6/7, CentOS 6/7, or
+                 Ubuntu 12.04/14.04."
+
+
+- name: "Define role discovered variables, usable throughout the playbook"
+  hosts: primary:secondary:database
+  gather_facts: false
+  roles:
+     - role: awx_install
+       awx_install_exec_vars_only: true
+
+
+- name: "Install postgres database node"
+  hosts: database
+  gather_facts: false
+  roles:
+   - role: postgres
+     postgres_exec_vars_only: true
+      
+   - role: packages_el
+     packages_el_install_tower: false
+     packages_el_install_postgres: true
+     when: ansible_os_family == "RedHat"
+
+
+- name: "Install Tower node(s)"
+  hosts: primary:secondary
+  gather_facts: false
+  roles:
+    - role: packages_el
+      tags: packages
+      packages_el_tower_package_name: "{{ tower_package_name }}"
+      packages_el_tower_package_version: "{{ tower_package_version }}"
+      when: ansible_os_family == 'RedHat'
+    
